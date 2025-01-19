@@ -1,0 +1,11 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["node_modules", "coverage", "dist"],
+  "exec": "node ./src/app",
+  "restartable": "rs",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "legacyWatch": true
+}

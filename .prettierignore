@@ -1,0 +1,6 @@
+# IntelliJ project files
+.idea
+gen
+**/*.hbs
+
+node_modules
