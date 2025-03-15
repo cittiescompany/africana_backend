@@ -2,9 +2,12 @@ import mongoose from 'mongoose';
 import {hashpassword, comparepassword} from '../helpers/auth.js';
 
 const userSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
-    required: true,
+    trim: true,
+  },
+  lastName: {
+    type: String,
     trim: true,
   },
   email: {

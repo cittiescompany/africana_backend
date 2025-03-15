@@ -4,8 +4,6 @@ import { signjwt } from '../helpers/auth.js';
 const AuthController = {
   async signup(req, res, next) {
     try {
-      console.log("hello world")
-      req.body.name = req.body.email.split('@')[0];
       const user = await UserService.create(req.body);
       const token = await signjwt({ id: user.id });
       res.status(201).json({
@@ -66,6 +64,18 @@ const AuthController = {
           .status(400)
           .json({ success: false, message: 'User not found' });
       res.status(200).json({ success: true, user });
+    } catch (err) {
+      next(err);
+    }
+  },
+  
+  async getUsers(req, res, next) {
+    try {
+      const users = await UserService.getAll();
+      return res.status(200).json({
+        success: true,
+        users: users.length > 0 ? users : 'No registered users yet',
+      });
     } catch (err) {
       next(err);
     }
