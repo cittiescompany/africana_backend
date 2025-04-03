@@ -1,17 +1,19 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import session from 'express-session';
-import helmet from 'helmet';
-import { createServer } from 'http';
-import compression from 'compression';
-import logger from './lib/logger.js';
-import routes from './routes/index.js';
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const dotenv = require('dotenv');
+const session = require('express-session');
+const helmet = require('helmet');
+const { createServer } = require('http');
+const compression = require('compression');
+const logger = require('./lib/logger');
+const routes = require('./routes');
+const { Server } = require('socket.io');
+const Notification = require('./models/Notification');
 
-dotenv.config({ overRide: true });
+dotenv.config({ override: true });
 process.env.TZ = 'Etc/UTC';
 
 if (!process.env.MONGODB_URI) {
@@ -23,7 +25,12 @@ if (!process.env.PORT) {
 }
 
 const app = express();
-const Server = createServer(app);
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
 
 mongoose
   .connect(process.env.MONGODB_URI)
@@ -44,7 +51,7 @@ app.use(
       if (req.headers['x-no-compression']) return false;
       return compression.filter(req, res);
     },
-  }),
+  })
 );
 app.use(cors());
 app.use(helmet());
@@ -58,7 +65,7 @@ app.use(
       sameSite: 'Lax',
       secure: process.env.NODE_ENV === 'production',
     },
-  }),
+  })
 );
 app.use(
   rateLimit({
@@ -66,26 +73,62 @@ app.use(
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-  }),
+  })
 );
 app.use(express.json());
+
+const onlineUsers = new Map();
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("userConnected", (userId) => {
+    onlineUsers.set(userId, socket.id);
+    console.log(`User ${userId} is online.`);
+  });
+
+  socket.on("disconnect", () => {
+    onlineUsers.forEach((value, key) => {
+      if (value === socket.id) {
+        onlineUsers.delete(key);
+      }
+    });
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+const sendNotification = async (recipientId, notificationData) => {
+  try {
+    const notification = new Notification(notificationData);
+    await notification.save();
+
+    const recipientSocketId = onlineUsers.get(recipientId);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("newNotification", notification);
+    }
+  } catch (error) {
+    console.error("Error sending notification:", error);
+  }
+};
+
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('tiny'));
-
 app.use(routes);
 
-Server.listen(process.env.PORT, () => {
-  logger.info(`⚡️ Server is running on port ${process.env.PORT}`);
+server.listen(process.env.PORT, () => {
+  logger.info(`⚡️ server is running on port ${process.env.PORT}`);
 });
 
 const graceful = async () => {
   await mongoose.connection.close();
   logger.info('💀 Mongoose connection closed, goodbye!');
-  Server.close(() => {
-    logger.info('💀 Server closed ');
+  server.close(() => {
+    logger.info('💀 server closed ');
     process.exit(0);
   });
 };
 
 process.on('SIGTERM', graceful);
 process.on('SIGINT', graceful);
+
+module.exports = { io, sendNotification, onlineUsers };

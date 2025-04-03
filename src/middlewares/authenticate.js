@@ -1,4 +1,4 @@
-import { jwtverify } from '../helpers/auth.js';
+const { jwtverify } = require('../helpers/auth.js');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -12,4 +12,4 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-export default authenticate;
+module.exports = authenticate;

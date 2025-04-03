@@ -1,5 +1,7 @@
-import UserService from '../services/users.js';
-import { signjwt } from '../helpers/auth.js';
+const UserService = require('../services/users.js');
+const { signjwt } = require('../helpers/auth.js');
+const User = require('../models/users.js');
+const Notification = require('../models/Notification.js');
 
 const AuthController = {
   async signup(req, res, next) {
@@ -29,11 +31,18 @@ const AuthController = {
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
+      
       const user = await UserService.getOne(
         { email },
         { returnPassword: true },
       );
-      if (!user.password) {
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Account does not exist.',
+        });
+      }
+      if (!user?.password) {
         return res.status(400).json({
           success: false,
           message: 'Username or password incorrect',
@@ -68,7 +77,6 @@ const AuthController = {
       next(err);
     }
   },
-  
   async getUsers(req, res, next) {
     try {
       const users = await UserService.getAll();
@@ -80,5 +88,65 @@ const AuthController = {
       next(err);
     }
   },
+
+  async getUserNotifications (req, res){
+    try {
+      const userId = res.locals.user.id;
+
+      console.log("userId: " + userId);
+      
+  
+      const notifications = await Notification.find({ "recipient": userId }).populate("sender", "firstName lastName email")
+      .populate("recipient", "firstName lastName email").sort({ createdAt: -1 });
+  
+      res.status(200).json({ success: true, notifications });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+
+async  markNotificationsAsRead (req, res) {
+    try {
+      const userId = res.locals.user.id;
+  
+      await Notification.updateMany({ recipient: userId, isRead: false }, { isRead: true });
+  
+      res.status(200).json({ success: true, message: "Notifications marked as read" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+  async deleteNotification (req, res) {
+    try {
+      const notificationId = req.params.id;
+      const userId = res.locals.user.id;
+  
+      const notification = await Notification.findOne({ _id: notificationId, recipient: userId });
+  
+      if (!notification) {
+        return res.status(404).json({ success: false, message: "Notification not found" });
+      }
+  
+      await Notification.deleteOne({ _id: notificationId });
+  
+      res.status(200).json({ success: true, message: "Notification deleted" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
 };
-export default AuthController;
+
+  // (async () => {
+  //   try {
+  //       // await User.deleteMany({});
+  //     const users = await User.find();
+  //     console.log("All users:", users);
+  //   } catch (error) {
+  //     console.error("Error fetching users:", error.message);
+  //   }
+  // })();
+
+module.exports = AuthController;

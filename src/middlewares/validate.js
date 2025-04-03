@@ -1,5 +1,6 @@
-import { ValidationError } from 'yup';
-const validate = (schema,  stripUnknown=false ) => {
+const { ValidationError } = require('yup');
+
+const validate = (schema, stripUnknown = false) => {
   return async (req, res, next) => {
     try {
       const validated = await schema.validate(
@@ -10,11 +11,13 @@ const validate = (schema,  stripUnknown=false ) => {
         },
         {
           stripUnknown,
-        },
+        }
       );
+
       if (validated.body) req.body = validated.body;
       if (validated.query) req.query = validated.query;
       if (validated.params) req.params = validated.params;
+
       next();
     } catch (error) {
       console.log(error);
@@ -27,4 +30,5 @@ const validate = (schema,  stripUnknown=false ) => {
     }
   };
 };
-export default validate;
+
+module.exports = validate;

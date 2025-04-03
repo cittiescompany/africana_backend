@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import {hashpassword, comparepassword} from '../helpers/auth.js';
+const mongoose = require('mongoose');
+const {hashpassword, comparepassword} = require('../helpers/auth.js');
 
 const userSchema = new mongoose.Schema({
   firstName: {
@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     default: 'user',
-    enum: ['user', 'admin'],
+    enum: ['user', 'realtor'],
   },
 });
 
@@ -61,4 +61,4 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await comparepassword(candidatePassword, this.password);
 };  
 
-export default mongoose.model('users', userSchema);
+module.exports = mongoose.model('users', userSchema);

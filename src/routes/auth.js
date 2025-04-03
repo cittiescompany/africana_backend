@@ -1,9 +1,9 @@
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import validate from '../middlewares/validate.js';
-import { signupbodySchema } from '../schemas/auth.js';
-import authController from '../controllers/auth.js';
-import authenticate from '../middlewares/authenticate.js';
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const validate = require('../middlewares/validate.js');
+const { signupbodySchema } = require('../schemas/auth.js');
+const authController = require('../controllers/auth.js');
+const authenticate = require('../middlewares/authenticate.js');
 const router = express.Router();
 
 router.post(
@@ -34,4 +34,4 @@ router.post(
 );
 router.get('/profile', authenticate, authController.getProfile);
 
-export default router;
+module.exports=router;

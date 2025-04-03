@@ -1,4 +1,5 @@
-import winston, { format } from 'winston';
+const winston = require('winston');
+const { format } = winston;
 
 const logger = winston.createLogger({
   levels: winston.config.syslog.levels,
@@ -11,9 +12,9 @@ const logger = winston.createLogger({
           ? JSON.stringify(info.message, null, 2)
           : info.message
       }`;
-    }),
+    })
   ),
   transports: [new winston.transports.Console({ level: 'debug' })],
 });
 
-export default logger;
+module.exports = logger;

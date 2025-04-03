@@ -1,4 +1,4 @@
-import UserDao from '../dao/users.js';
+const UserDao = require('../dao/users.js');
 
 const UserService = {
   async create(body) {
@@ -7,9 +7,12 @@ const UserService = {
   async getOne(args, { returnPassword = false } = {}) {
     return UserDao.getOne(args, { returnPassword });
   },
+  async getAll() {
+    return UserDao.getAll();
+  },
   async updateUserLastLogin(user) {
     user.lastlogin = new Date();
     await user.save();
   },
 };
-export default UserService;
+module.exports = UserService;
