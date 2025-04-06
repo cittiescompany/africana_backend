@@ -112,6 +112,10 @@ const sendNotification = async (recipientId, notificationData) => {
 };
 
 app.use(express.urlencoded({ extended: true }));
+app.use("/",(req, res) => {
+  res.send('Welcome to the API');
+}
+);
 app.use(morgan('tiny'));
 app.use(routes);
 
