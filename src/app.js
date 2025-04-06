@@ -112,11 +112,6 @@ const sendNotification = async (recipientId, notificationData) => {
 };
 
 app.use(express.urlencoded({ extended: true }));
-app.use("/",(req, res) => {
-  res.status(200).json({
-    message: 'Welcome to Africana Backend',
-  });
-});
 app.use(morgan('tiny'));
 app.use(routes);
 
