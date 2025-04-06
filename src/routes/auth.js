@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const validate = require('../middlewares/validate.js');
-const { signupbodySchema } = require('../schemas/auth.js');
+const { signupbodySchema,verifybodySchema,resendMailbodySchema } = require('../schemas/auth.js');
 const authController = require('../controllers/auth.js');
 const authenticate = require('../middlewares/authenticate.js');
 const router = express.Router();
@@ -19,6 +19,17 @@ router.post(
   validate(signupbodySchema),
   authController.signup,
 );
+router.post(
+  '/verify',
+  validate(verifybodySchema),
+  authController.verification,
+);
+router.post(
+  '/resendmail',
+  validate(resendMailbodySchema),
+  authController.resendMail,
+);
+
 router.post(
   '/login',
     rateLimit({

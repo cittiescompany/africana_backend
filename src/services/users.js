@@ -4,8 +4,8 @@ const UserService = {
   async create(body) {
     return UserDao.create(body);
   },
-  async getOne(args, { returnPassword = false } = {}) {
-    return UserDao.getOne(args, { returnPassword });
+  async getOne(args, options) {
+    return UserDao.getOne(args, options);
   },
   async getAll() {
     return UserDao.getAll();

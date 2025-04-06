@@ -29,6 +29,12 @@ const userSchema = new mongoose.Schema({
     select: false,
   },
   googleId: { type: String, select: false },
+  loginOtp:{ otp: { type: String, select: false }, expiresAt: { type: Date, select: false } },
+  verificationOtp:{ otp: { type: String, select: false }, expiresAt: { type: Date, select: false } },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
   verification: {
     phone: {
       type: Boolean,
@@ -46,7 +52,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     default: 'user',
-    enum: ['user', 'realtor'],
+    enum: ['user', 'realtor','admin','super admin'],
   },
 });
 

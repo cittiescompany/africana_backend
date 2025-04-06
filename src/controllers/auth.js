@@ -1,21 +1,39 @@
 const UserService = require('../services/users.js');
-const { signjwt } = require('../helpers/auth.js');
+const {
+  signjwt,
+  registerVerification,
+  loginVerification,
+  generateOtp,
+  isExpired,
+} = require('../helpers/auth.js');
+const sendEmail = require('../helpers/mail.js');
 const User = require('../models/users.js');
 const Notification = require('../models/Notification.js');
 
 const AuthController = {
   async signup(req, res, next) {
     try {
-      const user = await UserService.create(req.body);
-      const token = await signjwt({ id: user.id });
+      const code = generateOtp();
+      const user = await UserService.create({
+        ...req.body,
+        verificationOtp: {
+          otp: code,
+          expiresAt: Date.now() + 60 * 60 * 1000,
+        },
+      });
+      await sendEmail({
+        to: user.email,
+        subject: 'Welcome And account verification ',
+        html: registerVerification({ code, user: `${user.firstName}` }),
+      });
+
       res.status(201).json({
         success: true,
-        token: token,
         user: user,
         message: 'success created an account',
       });
     } catch (err) {
-      console.log(err.message)
+      console.log(err.message);
       if (err.code === 11000) {
         let message;
         if (err.keyPattern.email) message = 'Email address already in use';
@@ -28,14 +46,115 @@ const AuthController = {
       next(err);
     }
   },
+  async verification(req, res, next) {
+    try {
+      const { email, code, type } = req.body;
+      const options =
+        type === 'register'
+          ? '+verificationOtp.otp +verificationOtp.expiresAt'
+          : '+loginOtp.otp +loginOtp.expiresAt';
+      const user = await UserService.getOne({ email }, options);
+      if (!user) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Account does not exist.' });
+      }
+
+      const expiredAt =
+        type === 'register'
+          ? user.verificationOtp.expiresAt
+          : user?.loginOtp?.expiresAt;
+      if (type === 'register' && user?.verificationOtp?.otp !== code) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Invalid verification code.' });
+      }
+      if (type === 'login' && user?.loginOtp?.otp !== code) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Invalid login code.' });
+      }
+      if (isExpired(expiredAt)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification code has expired.',
+        });
+      }
+      if (type === 'register') {
+        user.verificationOtp.otp = null;
+        user.verification.email = true;
+        user.isVerified = true;
+      } else {
+        user.verificationOtp.otp = null;
+        user.loginOtp.otp = null;
+        // user.isVerified = true;
+      }
+      await user.save();
+      const token = await signjwt({ id: user.id });
+
+      res.status(201).json({
+        success: true,
+        user: user,
+        token,
+        message:
+          type == 'login'
+            ? 'Account verified successfully'
+            : 'Login successfully',
+      });
+    } catch (err) {
+      console.log(err.message);
+      next(err);
+    }
+  },
+  async resendMail(req, res, next) {
+    try {
+      const { email, type } = req.body;
+      const code = generateOtp();
+      const options =
+        type === 'register'
+          ? '+verificationOtp.otp +verificationOtp.expiresAt'
+          : '+loginOtp.otp +loginOtp.expiresAt';
+      const user = await UserService.getOne({ email }, options);
+      if (!user) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Account does not exist.' });
+      }
+      if (type === 'register') {
+        user.verificationOtp.otp = code;
+        user.verificationOtp.expiresAt = Date.now() + 300 * 60 * 60 * 1000;
+      } else {
+        user.loginOtp.otp = code;
+        user.loginOtp.expiresAt = Date.now() + 20 * 60 * 1000;
+      }
+      await user.save();
+      const mailBody = {
+        to: user.email,
+        subject:
+          type === 'register'
+            ? 'Welcome And account verification'
+            : 'Login verification',
+        html:
+          type === 'register'
+            ? registerVerification({ code, user: `${user.firstName}` })
+            : loginVerification({ code, user: `${user.firstName}` }),
+      };
+      await sendEmail(mailBody);
+
+      res.status(201).json({
+        success: true,
+        message: 'Mail has been resent successfully',
+      });
+    } catch (err) {
+      console.log(err.message);
+      next(err);
+    }
+  },
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
-      
-      const user = await UserService.getOne(
-        { email },
-        { returnPassword: true },
-      );
+
+      const user = await UserService.getOne({ email }, '+password +isVerified');
       if (!user) {
         return res.status(400).json({
           success: false,
@@ -55,12 +174,33 @@ const AuthController = {
           message: 'Username or password incorrect',
         });
       }
-      await UserService.updateUserLastLogin(user);
-      const token = await signjwt({ id: user.id });
+      if (['admin', 'super admin'].includes(user.role)) {
+        const token = await signjwt({ id: user.id });
+        user.password = undefined;
+        return res.status(200).json({
+          success: true,
+          message: 'Login successfully',
+          token,
+          user,
+        });
+      }
+
+      if (!user.isVerified) {
+        return res
+          .status(400)
+          .json({ message: 'Please verify your account', success: false });
+      }
+      const code = generateOtp();
+      user.loginOtp.otp = code;
+      user.loginOtp.expiresAt = Date.now() + 20 * 60 * 1000;
+      await user.save();
+      await sendEmail({
+        to: user.email,
+        subject: 'Login verification',
+        html: loginVerification({ code, user: `${user.firstName}` }),
+      });
       user.password = undefined;
-      res
-        .status(200)
-        .json({ message: 'success login', token, user, success: true });
+      res.status(200).json({ message: 'success login', success: true });
     } catch (err) {
       next(err);
     }
@@ -89,64 +229,75 @@ const AuthController = {
     }
   },
 
-  async getUserNotifications (req, res){
+  async getUserNotifications(req, res) {
     try {
       const userId = res.locals.user.id;
 
-      console.log("userId: " + userId);
-      
-  
-      const notifications = await Notification.find({ "recipient": userId }).populate("sender", "firstName lastName email")
-      .populate("recipient", "firstName lastName email").sort({ createdAt: -1 });
-  
+      console.log('userId: ' + userId);
+
+      const notifications = await Notification.find({ recipient: userId })
+        .populate('sender', 'firstName lastName email')
+        .populate('recipient', 'firstName lastName email')
+        .sort({ createdAt: -1 });
+
       res.status(200).json({ success: true, notifications });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({ success: false, message: 'Server error' });
     }
   },
 
-async  markNotificationsAsRead (req, res) {
+  async markNotificationsAsRead(req, res) {
     try {
       const userId = res.locals.user.id;
-  
-      await Notification.updateMany({ recipient: userId, isRead: false }, { isRead: true });
-  
-      res.status(200).json({ success: true, message: "Notifications marked as read" });
+
+      await Notification.updateMany(
+        { recipient: userId, isRead: false },
+        { isRead: true },
+      );
+
+      res
+        .status(200)
+        .json({ success: true, message: 'Notifications marked as read' });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({ success: false, message: 'Server error' });
     }
   },
-  async deleteNotification (req, res) {
+  async deleteNotification(req, res) {
     try {
       const notificationId = req.params.id;
       const userId = res.locals.user.id;
-  
-      const notification = await Notification.findOne({ _id: notificationId, recipient: userId });
-  
+
+      const notification = await Notification.findOne({
+        _id: notificationId,
+        recipient: userId,
+      });
+
       if (!notification) {
-        return res.status(404).json({ success: false, message: "Notification not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: 'Notification not found' });
       }
-  
+
       await Notification.deleteOne({ _id: notificationId });
-  
-      res.status(200).json({ success: true, message: "Notification deleted" });
+
+      res.status(200).json({ success: true, message: 'Notification deleted' });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({ success: false, message: 'Server error' });
     }
   },
 };
 
-  // (async () => {
-  //   try {
-  //       // await User.deleteMany({});
-  //     const users = await User.find();
-  //     console.log("All users:", users);
-  //   } catch (error) {
-  //     console.error("Error fetching users:", error.message);
-  //   }
-  // })();
+// (async () => {
+//   try {
+//       // await User.deleteMany({});
+//     const users = await User.find();
+//     console.log("All users:", users);
+//   } catch (error) {
+//     console.error("Error fetching users:", error.message);
+//   }
+// })();
 
 module.exports = AuthController;
