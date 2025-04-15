@@ -4,6 +4,7 @@ const user = require('./user.js');
 const logger = require('../lib/logger.js');
 const investmentRoutes = require('./investmentRoutes.js');
 const propertyRoutes = require('./propertyRoutes.js');
+const transactionsRoutes = require('./transactionRoute.js');
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.use('/auth', auth);
 router.use('/user', user);
 router.use('/investments', investmentRoutes);
 router.use('/properties', propertyRoutes);
+router.use('/transactions', transactionsRoutes);
 
 router.use((req, res, next) => {
   res.status(404).json({ message: 'Route Not Found' });
