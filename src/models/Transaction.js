@@ -39,6 +39,34 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  bvn: {
+    type: String,
+    required: false,
+  },
+  idCard: {
+    type: String,
+    required: false,
+  },
+  charge: { type: Number, default: 0 },
+convertedCharge: { type: Number, default: 0 },
+isFirstCharge: { type: Boolean, default: false },
+  plan: {
+    type: String,
+    enum: ['recurrence', 'onetime-off'],
+    required: false,
+  },
+  isRecurringActive: {
+    type: Boolean,
+    default: false
+  },
+  chargeHistory: [
+    {
+      date: { type: Date, default: Date.now },
+      amount: Number,
+      convertedAmount: Number,
+      status: { type: String, default: 'success' },
+    },
+  ],
   senderEmail: {
     type: String,
     required: true,
@@ -52,6 +80,10 @@ const transactionSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  dueDate: {
+    type: Date,
+    default: false,
   },
 });
 

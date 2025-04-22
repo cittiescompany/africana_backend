@@ -22,6 +22,14 @@ const userSchema = new mongoose.Schema({
     unique: false,
     trim: true,
   },
+  idCard: {
+    type: String,
+    required: false,
+  },
+  bvn: {
+    type: String,
+    required: false,
+  },
   password: {
     type: String,
     required: true,
