@@ -150,6 +150,7 @@ const AuthController = {
       next(err);
     }
   },
+  
   async login(req, res, next) {
     try {
       const { email, password } = req.body;

@@ -131,3 +131,157 @@ exports.loginVerification=(data)=> {
 exports.isExpired=(date) =>{
   return Date.now() > date;
 }
+
+
+exports.senderNotification= (data) => {
+  return `
+ <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        .receipt-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .transaction-header {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .transaction-details {
+            margin-bottom: 30px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+        .detail-value {
+            font-weight: 500;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e74c3c;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color:${data?.status=='success'?"rgb(60, 241, 15)":data?.status=='pending'?'#f1c40f':'rgb(199, 24, 11)'};
+            color: white;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        .note {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="header">
+            <img src="https://yourcompany.com/logo.png" alt="Company Logo" class="logo">
+            <h1 class="transaction-header">Payment Sent Successfully</h1>
+        </div>
+
+        <div class="amount">
+            -₦${data?.amount}
+        </div>
+
+        <div class="transaction-details">
+            <div class="detail-row">
+                <span class="detail-label">Transaction ID:</span>
+                <span class="detail-value"> ${data?.transactionId??'4348hjfdfkkbnbdf934'}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date & Time:</span>
+                <span class="detail-value"> ${new Date(data.createdAt).toLocaleDateString()} ${new Date(data.createdAt).toLocaleTimeString()}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Account Name:</span>
+                <span class="detail-value"> ${data?.recipient_accountDetails.account_name}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Account Number:</span>
+                <span class="detail-value"> ${data?.recipient_accountDetails.account_number}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Bank:</span>
+                <span class="detail-value"> ${data?.recipient_accountDetails.bank_name}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Method:</span>
+                <span class="detail-value"> ${data?.paymentMethod}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value"><span class="status-badge"> ${data?.status}</span></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Reference:</span>
+                <span class="detail-value"> ${data?.reference}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Fee:</span>
+                <span class="detail-value"> ₦${data?.fee}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Total Amount:</span>
+                <span class="detail-value"> ₦${data?.totalAmount}</span>
+            </div>
+        </div>
+
+        <div class="note">
+            <p>This transaction has been processed successfully. The amount has been deducted from your account balance. If you didn't authorize this transaction, please contact our support team immediately.</p>
+        </div>
+
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+            <p>Need help? Contact our support team at support@yourcompany.com</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};

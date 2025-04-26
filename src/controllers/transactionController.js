@@ -1,4 +1,6 @@
 // controllers/transactionController.js
+const { senderNotification } = require("../helpers/auth");
+const sendEmail = require("../helpers/mail");
 const Transaction = require("../models/Transaction");
 const User=require('../models/users')
 const cron = require('node-cron')
@@ -64,7 +66,7 @@ exports.createTransaction = async (req, res) => {
     });
 
     const savedTransaction = await transaction.save();
-
+    await handleEmail(savedTransaction)
     if (plan&&plan === 'recurrence') {
       scheduleRecurringTransaction(savedTransaction.toObject());
     }
@@ -116,7 +118,8 @@ const scheduleRecurringTransaction = (transactionData) => {
           dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // next due date
         });
   
-        await newTransaction.save();
+        const savedTransaction = await newTransaction.save();
+        await handleEmail(savedTransaction)
       } catch (err) {
         console.error('Failed to process recurring transaction:', err);
       }
@@ -202,6 +205,29 @@ exports.getUserTransactions = async (req, res) => {
       return res.status(500).json({ message: 'Server error' });
     }
   };
+
+  const handleEmail=async(savedTransaction)=>{
+    const transactionId=await generateTransactionId()
+    const reference=await generateReference(savedTransaction.recipient_accountDetails.account_name)
+    const mailBody = {
+        to: savedTransaction.senderEmail,
+        subject:'Payment Successful',
+        html:senderNotification({transactionId, reference, amount:savedTransaction.convertedAmount.toFixed(2), status:'success', paymentMethod:savedTransaction.paymentMethod, fee:savedTransaction.convertedCharge.toFixed(2), totalAmount:(savedTransaction.convertedAmount+savedTransaction.convertedCharge).toFixed(2),recipient_accountDetails:savedTransaction.recipient_accountDetails,createdAt:savedTransaction.createdAt})
+      };
+      await sendEmail(mailBody);
+  }
+
+  const generateTransactionId=async()=> {
+    const timestamp = Date.now().toString(36); 
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    return `TXN-${timestamp}-${randomStr}`.toUpperCase();
+}
+
+const generateReference=async(userName) => {
+  const initials = userName.split(' ').map(name => name[0]).join('').toUpperCase();
+  const timestamp = Date.now().toString().slice(-6);
+  return `${initials}${timestamp}`;
+}
 
 
   // function (){
