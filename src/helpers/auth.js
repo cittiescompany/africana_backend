@@ -182,6 +182,8 @@ exports.senderNotification = (data) => {
         }
         .detail-row {
             display: flex;
+            justify: space-between;
+            align-items:center;
             flex-wrap: wrap;
             padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
