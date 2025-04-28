@@ -168,7 +168,8 @@ exports.senderNotification = (data) => {
             padding: 30px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             width: 100%;
-            max-width: 600px;
+            max-width: 600px; 
+            margin:0 auto;
         }
         .transaction-header {
             color: #2c3e50;
@@ -185,6 +186,7 @@ exports.senderNotification = (data) => {
             padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
             gap: 10px;
+            width:100%;
         }
         .detail-label {
             font-weight: 600;
