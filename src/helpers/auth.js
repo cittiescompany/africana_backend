@@ -178,7 +178,7 @@ exports.senderNotification = (data) => {
         }
         .transaction-details {
             margin-bottom: 30px;
-            width: 100%;
+            width: 100% !important;
         }
         .detail-row {
             display: flex;
@@ -188,7 +188,7 @@ exports.senderNotification = (data) => {
             padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
             gap: 10px;
-            width:100%;
+            width:100% !important;
         }
         .detail-label {
             font-weight: 600;
