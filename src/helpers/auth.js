@@ -133,9 +133,9 @@ exports.isExpired=(date) =>{
 }
 
 
-exports.senderNotification= (data) => {
+exports.senderNotification = (data) => {
   return `
- <html lang="en">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -145,10 +145,12 @@ exports.senderNotification= (data) => {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
+            margin: 0;
             padding: 20px;
             background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
         }
         .header {
             text-align: center;
@@ -165,6 +167,8 @@ exports.senderNotification= (data) => {
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
         }
         .transaction-header {
             color: #2c3e50;
@@ -173,19 +177,25 @@ exports.senderNotification= (data) => {
         }
         .transaction-details {
             margin-bottom: 30px;
+            width: 100%;
         }
         .detail-row {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
             padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
+            gap: 10px;
         }
         .detail-label {
             font-weight: 600;
             color: #7f8c8d;
+            min-width: 120px;
         }
         .detail-value {
             font-weight: 500;
+            flex: 1;
+            min-width: 150px;
+            text-align: right;
         }
         .amount {
             font-size: 24px;
@@ -216,6 +226,19 @@ exports.senderNotification= (data) => {
             margin-top: 20px;
             font-size: 14px;
         }
+        
+        @media (max-width: 480px) {
+            .receipt-container {
+                padding: 20px;
+            }
+            .detail-label, .detail-value {
+                min-width: 100%;
+                text-align: left;
+            }
+            .detail-value {
+                margin-top: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -232,43 +255,43 @@ exports.senderNotification= (data) => {
         <div class="transaction-details">
             <div class="detail-row">
                 <span class="detail-label">Transaction ID:</span>
-                <span class="detail-value"> ${data?.transactionId??'4348hjfdfkkbnbdf934'}</span>
+                <span class="detail-value">${data?.transactionId}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Date & Time:</span>
-                <span class="detail-value"> ${new Date(data.createdAt).toLocaleDateString()} ${new Date(data.createdAt).toLocaleTimeString()}</span>
+                <span class="detail-value">${new Date(data.createdAt).toLocaleDateString()} ${new Date(data.createdAt).toLocaleTimeString()}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Account Name:</span>
-                <span class="detail-value"> ${data?.recipient_accountDetails.account_name}</span>
+                <span class="detail-value">${data?.recipient_accountDetails?.account_name || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Account Number:</span>
-                <span class="detail-value"> ${data?.recipient_accountDetails.account_number}</span>
+                <span class="detail-value">${data?.recipient_accountDetails?.account_number || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Bank:</span>
-                <span class="detail-value"> ${data?.recipient_accountDetails.bank_name}</span>
+                <span class="detail-value">${data?.recipient_accountDetails?.bank_name || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Payment Method:</span>
-                <span class="detail-value"> ${data?.paymentMethod}</span>
+                <span class="detail-value">${data?.paymentMethod || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Status:</span>
-                <span class="detail-value"><span class="status-badge"> ${data?.status}</span></span>
+                <span class="detail-value"><span class="status-badge">${data?.status}</span></span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Reference:</span>
-                <span class="detail-value"> ${data?.reference}</span>
+                <span class="detail-value">${data?.reference || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Fee:</span>
-                <span class="detail-value"> ₦${data?.fee}</span>
+                <span class="detail-value">₦${data?.fee || '0.00'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Total Amount:</span>
-                <span class="detail-value"> ₦${data?.totalAmount}</span>
+                <span class="detail-value">₦${data?.totalAmount || data?.amount}</span>
             </div>
         </div>
 
