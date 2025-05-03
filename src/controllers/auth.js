@@ -244,7 +244,7 @@ delete userObj.password;
       const currentUserId = res.locals.user.id; // assuming user is authenticated and ID is set in req.user
   
       const users = await User.find({ _id: { $ne: currentUserId } }) // exclude current user
-        .sort({ lastLogin: 1 })                                      // sort by earliest lastLogin
+        .sort({ lastLogin: -1 })                                      // sort by earliest lastLogin
         .select('-password');                                        // exclude password field
   
       return res.status(200).json({
