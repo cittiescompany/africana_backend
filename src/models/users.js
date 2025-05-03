@@ -26,6 +26,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  referralCode: {
+    type: Number,
+    required: true,
+  },
+  referredBy: {
+    type: Number,
+    required: false,
+  },
   bvn: {
     type: String,
     required: false,
@@ -53,7 +61,7 @@ const userSchema = new mongoose.Schema({
       default: false,
     },
   },
-  lastlogin: {
+  lastLogin: {
     type: Date,
     default: () => Date.now(),
   },

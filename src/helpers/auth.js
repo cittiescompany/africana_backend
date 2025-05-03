@@ -337,16 +337,19 @@ exports.senderNotification = (data) => {
       margin: 0 auto;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     }
-    .transaction-header {
+      .transaction-header-container{
       text-align: center;
-      margin-bottom: 20px;
+      }
+    .transaction-header {
+    passing: 0;
+    margin: 0;
       color: #2c3e50;
     }
     .amount {
       font-size: 24px;
       font-weight: bold;
       text-align: center;
-      color: #e74c3c;
+      color:${data?.status == 'success'? "#e74c3c":data?.status == 'pending'?"#95a5a6":"#f1c40f"};
       margin: 20px 0;
     }
     .transaction-details {
@@ -410,11 +413,14 @@ exports.senderNotification = (data) => {
   <div class="receipt-container">
     <div class="header">
       <img src="https://yourcompany.com/logo.png" alt="Company Logo" style="max-width: 150px; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;">
-      <h1 class="transaction-header">Payment Sent Successfully</h1>
+      <div class="transaction-header-container">
+      <h1 class="transaction-header">${data?.title}</h1>
+      <p style="font-size: 16px; color: #95a5a6; font-style: italic;padding:0; margin:0;">${data?.subtitle}</p>
+      </div>
     </div>
 
     <div class="amount">
-      -₦${data?.amount}
+      ${data?.status == 'success' ? "-": ''}₦${data?.amount}
     </div>
 
     <div class="transaction-details">
@@ -468,7 +474,7 @@ exports.senderNotification = (data) => {
 
     <div class="footer">
       <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
-      <p>Need help? Contact our support team at support@yourcompany.com</p>
+      <p>Need help? Contact our support team at <link href="support@moniclan.com">support@moniclan.com</link></p>
     </div>
   </div>
 </body>

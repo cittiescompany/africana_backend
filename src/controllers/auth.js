@@ -12,10 +12,12 @@ const Notification = require('../models/Notification.js');
 
 const AuthController = {
   async signup(req, res, next) {
+    const referralCode = Math.floor(1000 + Math.random() * 9000);
     try {
       const code = generateOtp();
       const user = await UserService.create({
         ...req.body,
+        referralCode,
         verificationOtp: {
           otp: code,
           expiresAt: Date.now() + 60 * 60 * 1000,
@@ -175,14 +177,19 @@ const AuthController = {
           message: 'Username or password incorrect',
         });
       }
+
+      user.lastLogin = new Date();
+
       if (['admin', 'super admin'].includes(user.role)) {
+        await user.save()
         const token = await signjwt({ id: user.id });
-        user.password = undefined;
+        const userObj = user.toObject();
+delete userObj.password;
         return res.status(200).json({
           success: true,
           message: 'Login successfully',
           token,
-          user,
+          user: userObj,
         });
       }
 
@@ -194,6 +201,7 @@ const AuthController = {
       const code = generateOtp();
       user.loginOtp.otp = code;
       user.loginOtp.expiresAt = Date.now() + 20 * 60 * 1000;
+      user.lastLogin = new Date();
       await user.save();
       await sendEmail({
         to: user.email,
@@ -218,9 +226,27 @@ const AuthController = {
       next(err);
     }
   },
+  // async getUsers(req, res, next) {
+  //   try {
+  //     const users = await UserService.getAll();
+  //     return res.status(200).json({
+  //       success: true,
+  //       users: users.length > 0 ? users : 'No registered users yet',
+  //     });
+  //   } catch (err) {
+  //     next(err);
+  //   }
+  // },
+
   async getUsers(req, res, next) {
+    console.log(res.locals.user.id);
     try {
-      const users = await UserService.getAll();
+      const currentUserId = res.locals.user.id; // assuming user is authenticated and ID is set in req.user
+  
+      const users = await User.find({ _id: { $ne: currentUserId } }) // exclude current user
+        .sort({ lastLogin: 1 })                                      // sort by earliest lastLogin
+        .select('-password');                                        // exclude password field
+  
       return res.status(200).json({
         success: true,
         users: users.length > 0 ? users : 'No registered users yet',
@@ -229,6 +255,7 @@ const AuthController = {
       next(err);
     }
   },
+  
 
   async getUserNotifications(req, res) {
     try {

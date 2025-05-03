@@ -4,7 +4,7 @@ const authenticate = require('../middlewares/authenticate.js');
 const router = express.Router();
 
 
-router.get('/all',authController.getUsers);
+router.get('/all',authenticate,authController.getUsers);
 router.get('/notifications',authenticate,authController.getUserNotifications);
 router.put('/markAsRead',authenticate,authController.markNotificationsAsRead);
 router.delete('/notifications/:id',authenticate,authController.deleteNotification);

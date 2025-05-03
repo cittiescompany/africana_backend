@@ -62,6 +62,7 @@ exports.createTransaction = async (req, res) => {
       isFirstCharge: true,
       charge: 0,
       convertedCharge: 0,
+      status: 'pending',
       dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // One month from now
     });
 
@@ -77,6 +78,31 @@ exports.createTransaction = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error });
   }
 };
+
+
+exports.confirmPayment = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const transaction = await Transaction.findByIdAndUpdate(
+      id,
+      { status: req.body.status },
+      { new: true }
+    );
+
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    await handleEmail(transaction);
+
+    res.status(200).json({ success: true, message: 'The payment is confirmed' });
+  } catch (error) {
+    console.error('Confirm Payment Error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error });
+  }
+};
+
 
 
 const scheduleRecurringTransaction = (transactionData) => {
@@ -209,10 +235,12 @@ exports.getUserTransactions = async (req, res) => {
   const handleEmail=async(savedTransaction)=>{
     const transactionId=await generateTransactionId()
     const reference=await generateReference(savedTransaction.recipient_accountDetails.account_name)
+    const title=savedTransaction.status=='pending'?"Payment is pending":savedTransaction.status=='success'?'Payment Successful':'Payment Failed'
+    const subtitle=savedTransaction.status=='pending'?"Please wait for the confirmation of your payment":savedTransaction.status=='success'?'Your payment has been successfully confirmed':'Your payment was not successful, please try again or contact your bank for more information'
     const mailBody = {
         to: savedTransaction.senderEmail,
-        subject:'Payment Successful',
-        html:senderNotification({transactionId, reference, amount:savedTransaction.convertedAmount.toFixed(2), status:'success', paymentMethod:savedTransaction.paymentMethod, fee:savedTransaction.convertedCharge.toFixed(2), totalAmount:(savedTransaction.convertedAmount+savedTransaction.convertedCharge).toFixed(2),recipient_accountDetails:savedTransaction.recipient_accountDetails,createdAt:savedTransaction.createdAt})
+        subject:savedTransaction.status=='pending'?"Payment is pending":savedTransaction.status=='success'?'Payment Successful':'Payment Failed',
+        html:senderNotification({transactionId,title, subtitle, reference, amount:savedTransaction.convertedAmount.toFixed(2), status:savedTransaction.status, paymentMethod:savedTransaction.paymentMethod, fee:savedTransaction.convertedCharge.toFixed(2), totalAmount:(savedTransaction.convertedAmount+savedTransaction.convertedCharge).toFixed(2),recipient_accountDetails:savedTransaction.recipient_accountDetails,createdAt:savedTransaction.createdAt})
       };
       await sendEmail(mailBody);
   }
@@ -236,8 +264,8 @@ const generateReference=async(userName) => {
 
   //     (async () => {
   //   try {
-  //       await Transaction.deleteMany({'senderDetails._id':"67fbf05e237d0141a9eef5e5"});
-  //     const transactions = await Transaction.find();
+  //       await Transaction.deleteMany();
+  //     const transactions = await Transaction.find({'senderDetails._id':"67fbf05e237d0141a9eef5e5"});
   //     console.log("All Transactions:", transactions);
   //   } catch (error) {
   //     console.error("Error fetching investments:", error.message);
