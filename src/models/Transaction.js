@@ -51,6 +51,10 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  period: {
+    type: String,
+    required: false,
+  },
   charge: { type: Number, default: 0 },
 convertedCharge: { type: Number, default: 0 },
 isFirstCharge: { type: Boolean, default: false },
@@ -86,6 +90,10 @@ isFirstCharge: { type: Boolean, default: false },
     default: Date.now,
   },
   dueDate: {
+    type: Date,
+    default: false,
+  },
+  startDate: {
     type: Date,
     default: false,
   },

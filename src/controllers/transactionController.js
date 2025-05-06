@@ -1,10 +1,12 @@
 // controllers/transactionController.js
 const { senderNotification } = require("../helpers/auth");
 const sendEmail = require("../helpers/mail");
+const Stripe = require('stripe');
 const Transaction = require("../models/Transaction");
 const User=require('../models/users')
 const cron = require('node-cron')
 const scheduledJobs = new Map();
+const stripe = new Stripe('REMOVED_SECRET');
 
 // Create Transaction
 // exports.createTransaction = async (req, res) => {
@@ -31,6 +33,20 @@ const scheduledJobs = new Map();
 
 // * * * * *
 // 0 0 1 * *
+exports.createStripePayment = async (req, res) => {
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: req.body.amount??1099, // e.g., $10.99
+      currency: 'usd',
+      automatic_payment_methods: { enabled: true },
+    });
+
+    res.send({ client_secret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: 'Failed to create PaymentIntent' });
+  }
+};
 
 exports.createTransaction = async (req, res) => {
   try {
@@ -40,19 +56,25 @@ exports.createTransaction = async (req, res) => {
       plan,
       bvn,
       idCard,
+      startDate,
+      period,
     } = req.body;
-   
-      if (senderDetails?._id && (bvn || idCard)) {
-        await User.findOneAndUpdate(
-          { _id: senderDetails._id },
-          {
-            ...(bvn && { bvn }),
-            ...(idCard && { idCard }),
-          },
-          { new: true }
-        );
-      }
 
+    // Update user info if provided
+    if (senderDetails?._id && (bvn || idCard)) {
+      await User.findOneAndUpdate(
+        { _id: senderDetails._id },
+        {
+          ...(bvn && { bvn }),
+          ...(idCard && { idCard }),
+        },
+        { new: true }
+      );
+    }
+
+    const start = new Date(startDate);
+    const dueDate = new Date(start);
+    dueDate.setMonth(dueDate.getMonth() + 1);
 
     const transaction = new Transaction({
       ...req.body,
@@ -63,13 +85,14 @@ exports.createTransaction = async (req, res) => {
       charge: 0,
       convertedCharge: 0,
       status: 'pending',
-      dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // One month from now
+      dueDate,
     });
 
     const savedTransaction = await transaction.save();
-    await handleEmail(savedTransaction)
-    if (plan&&plan === 'recurrence') {
-      scheduleRecurringTransaction(savedTransaction.toObject());
+    await handleEmail(savedTransaction);
+
+    if (plan === 'recurrence' && period && Number(period) > 0) {
+      scheduleRecurringTransaction(savedTransaction.toObject(), start, Number(period));
     }
 
     res.status(201).json({ success: true, transaction: savedTransaction });
@@ -105,52 +128,57 @@ exports.confirmPayment = async (req, res) => {
 
 
 
-const scheduleRecurringTransaction = (transactionData) => {
-  const { _id, senderEmail } = transactionData;
+const scheduleRecurringTransaction = (transactionData, startDate, period) => {
+  const { _id } = transactionData;
+  let executionCount = 1;
 
- const job = cron.schedule('0 0 * * *', async () => {
+  const job = cron.schedule('0 0 * * *', async () => {
     const today = new Date();
-    const day = today.getDate();
-  
-    const dueTransactions = await Transaction.find({
-      isRecurringActive: true,
-      dueDate: {
-        $lte: today,
-      },
-    });
-  
-    for (const original of dueTransactions) {
-      try {
-        const originalAmount = parseFloat(original.amount);
-        const convertedAmount = parseFloat(original.convertedAmount);
-        const serviceFee = original.isFirstCharge ? 0 : originalAmount * 0.01;
-        const convertedServiceFee = original.isFirstCharge ? 0 : convertedAmount * 0.01;
-  
-        const newTransaction = new Transaction({
-          ...original.toObject(),
-          _id: undefined,
-          createdAt: new Date(),
-          isFirstCharge: false,
-          charge: serviceFee,
-          convertedCharge: convertedServiceFee,
-          chargeHistory: [
-            {
-              date: new Date(),
-              amount: originalAmount + serviceFee,
-              convertedAmount: convertedAmount + convertedServiceFee,
-              status: 'success',
-            },
-          ],
-          dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // next due date
-        });
-  
-        const savedTransaction = await newTransaction.save();
-        await handleEmail(savedTransaction)
-      } catch (err) {
-        console.error('Failed to process recurring transaction:', err);
+    const startDay = startDate.getDate();
+
+    // Only run on the same day of the month as startDate
+    if (today.getDate() !== startDay || executionCount >= period) return;
+
+    const original = await Transaction.findById(_id);
+    if (!original || !original.isRecurringActive) return;
+
+    try {
+      const originalAmount = parseFloat(original.amount);
+      const convertedAmount = parseFloat(original.convertedAmount);
+      const serviceFee = original.isFirstCharge ? 0 : originalAmount * 0.01;
+      const convertedServiceFee = original.isFirstCharge ? 0 : convertedAmount * 0.01;
+
+      const newTransaction = new Transaction({
+        ...original.toObject(),
+        _id: undefined,
+        createdAt: new Date(),
+        isFirstCharge: false,
+        charge: serviceFee,
+        convertedCharge: convertedServiceFee,
+        chargeHistory: [
+          ...(original.chargeHistory || []),
+          {
+            date: new Date(),
+            amount: originalAmount + serviceFee,
+            convertedAmount: convertedAmount + convertedServiceFee,
+            status: 'success',
+          },
+        ],
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      });
+
+      const savedTransaction = await newTransaction.save();
+      await handleEmail(savedTransaction);
+
+      executionCount++;
+      if (executionCount >= period) {
+        job.stop();
+        scheduledJobs.delete(_id.toString());
       }
+    } catch (err) {
+      console.error('Failed to process recurring transaction:', err);
     }
-  })  
+  });
 
   job.start();
   scheduledJobs.set(_id.toString(), job);
@@ -235,7 +263,7 @@ exports.getUserTransactions = async (req, res) => {
   const handleEmail=async(savedTransaction)=>{
     const transactionId=await generateTransactionId()
     const reference=await generateReference(savedTransaction.recipient_accountDetails.account_name)
-    const title=savedTransaction.status=='pending'?"Payment is pending":savedTransaction.status=='success'?'Payment Successful':'Payment Failed'
+    const title=savedTransaction.status=='pending'?"Awaiting payment confirmation":savedTransaction.status=='success'?'Payment Successful':'Payment Failed'
     const subtitle=savedTransaction.status=='pending'?"Please wait for the confirmation of your payment":savedTransaction.status=='success'?'Your payment has been successfully confirmed':'Your payment was not successful, please try again or contact your bank for more information'
     const mailBody = {
         to: savedTransaction.senderEmail,
