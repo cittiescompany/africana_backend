@@ -6,7 +6,7 @@ const Transaction = require("../models/Transaction");
 const User=require('../models/users')
 const cron = require('node-cron')
 const scheduledJobs = new Map();
-const stripe = new Stripe('REMOVED_SECRET');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Create Transaction
 // exports.createTransaction = async (req, res) => {
