@@ -35,6 +35,10 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  deliveryMethod: {
+    type: String,
+    required: false,
+  },
   service: {
     type: String,
     required: false,
