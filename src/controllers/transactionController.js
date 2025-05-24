@@ -36,8 +36,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 exports.createStripePayment = async (req, res) => {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(req.body.convertedAmount*100), // e.g., $10.99
-      currency: 'ngn',
+      amount: Math.round(req.body.amount*100), // e.g., $10.99
+      currency: 'usd',
       automatic_payment_methods: { enabled: true },
     });
 
