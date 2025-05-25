@@ -72,11 +72,23 @@ exports.createTransaction = async (req, res) => {
       );
     }
 
-    const start = new Date(startDate);
-    const dueDate = new Date(start);
-    dueDate.setMonth(dueDate.getMonth() + 1);
+    // const start = new Date(startDate);
+    // const dueDate = new Date(start);
+    // dueDate.setMonth(dueDate.getMonth() + 1);
 
-    const transaction = new Transaction({
+    // const transaction = new Transaction({
+    //   ...req.body,
+    //   isRecurringActive: plan === 'recurrence',
+    //   senderEmail: senderDetails?.email,
+    //   recipientEmail: recipient_accountDetails?.email,
+    //   isFirstCharge: true,
+    //   charge: 0,
+    //   convertedCharge: 0,
+    //   status: 'pending',
+    //   dueDate,
+    // });
+
+    const transactionPayload = {
       ...req.body,
       isRecurringActive: plan === 'recurrence',
       senderEmail: senderDetails?.email,
@@ -85,8 +97,17 @@ exports.createTransaction = async (req, res) => {
       charge: 0,
       convertedCharge: 0,
       status: 'pending',
-      dueDate,
-    });
+    };
+
+    // Conditionally add dueDate if startDate exists
+    if (startDate) {
+      const start = new Date(startDate);
+      const dueDate = new Date(start);
+      dueDate.setMonth(dueDate.getMonth() + 1);
+      transactionPayload.dueDate = dueDate;
+    }
+
+    const transaction = new Transaction(transactionPayload);
 
     const savedTransaction = await transaction.save();
     await handleEmail(savedTransaction);
@@ -280,7 +301,7 @@ exports.getUserTransactions = async (req, res) => {
 }
 
 const generateReference=async(userName) => {
-  const initials = userName.split(' ').map(name => name[0]).join('').toUpperCase();
+  const initials = userName?.split(' ').map(name => name[0]).join('').toUpperCase();
   const timestamp = Date.now().toString().slice(-6);
   return `${initials}${timestamp}`;
 }

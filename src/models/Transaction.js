@@ -5,7 +5,7 @@ const {Schema} = mongoose;
 const transactionSchema = new mongoose.Schema({
   type: {
     type: String,
-    required: true,
+    required: false,
   },
   amount: {
     type: String,
@@ -95,11 +95,11 @@ isFirstCharge: { type: Boolean, default: false },
   },
   dueDate: {
     type: Date,
-    default: false,
+    required: false,
   },
   startDate: {
     type: Date,
-    default: false,
+    required: false,
   },
 });
 
