@@ -4,7 +4,8 @@ const dotEnv = require('dotenv');
 dotEnv.config()
 
 exports.hashpassword = async (password) => {
-  return await bcrypt.hash(password, 10);
+  const salt = bcrypt.genSalt(10)
+  return await bcrypt.hash(password, salt);
 };
 
 exports.comparepassword = async (password, hash) => {

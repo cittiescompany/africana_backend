@@ -1,4 +1,4 @@
-const UserService = require('../services/users.js');
+
 const {
   signjwt,
   registerVerification,
@@ -9,89 +9,31 @@ const {
 const sendEmail = require('../helpers/mail.js');
 const User = require('../models/users.js');
 const Notification = require('../models/Notification.js');
+const Merchant = require('../models/merchant.js');
 
-const AuthController = {
+const merchantController = {
   async signup(req, res, next) {
+    const referralCode = Math.floor(1000 + Math.random() * 9000);
     try {
-      const {
-        isMerchant,
-        category,
-        merchantName,
-        address,
-        country,
-        state,
-        businessImageUrl,
-        ...rest
-      } = req.body;
-
-      // Check if user exists
-      const existingUser = await UserService.getOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email already registered' 
-        });
-      }
-
-      // Validate merchant fields if registering as merchant
-      if (isMerchant) {
-        if (!category || !merchantName || !address || !country || !state) {
-          return res.status(400).json({
-            success: false,
-            message: 'For merchant registration, category, merchant name, address, country, and state are required'
-          });
-        }
-      }
-
-      const referralCode = Math.floor(1000 + Math.random() * 9000);
       const code = generateOtp();
-      
-      // Prepare user data
-      const userData = {
-        ...rest,
+      const user = await Merchant.create({
+        ...req.body,
         referralCode,
         verificationOtp: {
           otp: code,
-          expiresAt: Date.now() + 60 * 60 * 1000
+          expiresAt: Date.now() + 60 * 60 * 1000,
         },
-        isMerchant: isMerchant || false
-      };
-
-      // Add merchant info if applicable
-      if (isMerchant) {
-        userData.merchantInfo = {
-          category,
-          merchantName,
-          address,
-          country,
-          state,
-          businessImageUrl: businessImageUrl || ''
-        };
-      }
-
-      const user = await UserService.create(userData);
-
-      // Send verification email
+      });
       await sendEmail({
         to: user.email,
-        subject: 'Welcome And account verification',
-        html: registerVerification({
-          code: user.verificationOtp.otp,
-          user: `${user.firstName}`
-        }),
+        subject: 'Welcome And account verification ',
+        html: registerVerification({ code, user: `${user.firstName}` }),
       });
-
-      // Create safe user object without sensitive data
-      const safeUser = user.toObject();
-      delete safeUser.password;
-      delete safeUser.verificationOtp;
-      delete safeUser.loginOtp;
-      delete safeUser.googleId;
 
       res.status(201).json({
         success: true,
-        user: safeUser,
-        message: 'Successfully created an account'
+        user: user,
+        message: 'success created an account',
       });
     } catch (err) {
       console.log(err.message);
@@ -99,9 +41,6 @@ const AuthController = {
         let message;
         if (err.keyPattern.email) message = 'Email address already in use';
         else if (err.keyPattern.phone) message = 'Phone number already in use';
-        else if (err.keyPattern['merchantInfo.merchantName']) {
-          message = 'Merchant name already in use';
-        }
         if (message) {
           return res.status(400).json({ success: false, message });
         }
@@ -109,6 +48,7 @@ const AuthController = {
       next(err);
     }
   },
+
   async verification(req, res, next) {
     try {
       const { email, code, type } = req.body;
@@ -116,7 +56,7 @@ const AuthController = {
         type === 'register'
           ? '+verificationOtp.otp +verificationOtp.expiresAt'
           : '+loginOtp.otp +loginOtp.expiresAt';
-      const user = await UserService.getOne({ email }, options);
+      const user = await Merchant.getOne({ email }, options);
       if (!user) {
         return res
           .status(400)
@@ -169,6 +109,7 @@ const AuthController = {
       next(err);
     }
   },
+
   async resendMail(req, res, next) {
     try {
       const { email, type } = req.body;
@@ -177,7 +118,7 @@ const AuthController = {
         type === 'register'
           ? '+verificationOtp.otp +verificationOtp.expiresAt'
           : '+loginOtp.otp +loginOtp.expiresAt';
-      const user = await UserService.getOne({ email }, options);
+      const user = await Merchant.getOne({ email }, options);
       if (!user) {
         return res
           .status(400)
@@ -218,7 +159,7 @@ const AuthController = {
     try {
       const { email, password } = req.body;
 
-      const user = await UserService.getOne({ email }, '+password +isVerified');
+      const user = await Merchant.findOne({ email }, '+password +isVerified');
       if (!user) {
         return res.status(400).json({
           success: false,
@@ -235,7 +176,7 @@ const AuthController = {
       if (!isMatch) {
         return res.status(400).json({
           success: false,
-          message: 'Username or password incorrect',
+          message: 'Password is incorrect',
         });
       }
 
@@ -277,7 +218,7 @@ delete userObj.password;
   },
   async getProfile(req, res, next) {
     try {
-      const user = await UserService.getOne({ _id: res.locals.user.id });
+      const user = await Merchant.findOne({ _id: res.locals.user.id });
       if (!user)
         return res
           .status(400)
@@ -289,7 +230,7 @@ delete userObj.password;
   },
   // async getUsers(req, res, next) {
   //   try {
-  //     const users = await UserService.getAll();
+  //     const users = await Merchant.getAll();
   //     return res.status(200).json({
   //       success: true,
   //       users: users.length > 0 ? users : 'No registered users yet',
@@ -389,4 +330,4 @@ delete userObj.password;
 //   }
 // })();
 
-module.exports = AuthController;
+module.exports = merchantController;

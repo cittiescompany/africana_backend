@@ -44,6 +44,38 @@ const userSchema = new mongoose.Schema({
     trim: true,
     select: false,
   },
+  isMerchant: {
+    type: Boolean,
+    default: false
+  },
+  merchantInfo: {
+    category: {
+      type: String,
+      enum: ['', 'Restaurant', 'Food Items', 'African Attire', 'Herb', 'Hair Saloon'],
+      default: ''
+    },
+    merchantName: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    address: {
+      type: String,
+      default: ''
+    },
+    country: {
+      type: String,
+      default: ''
+    },
+    state: {
+      type: String,
+      default: ''
+    },
+    businessImageUrl: {
+      type: String,
+      default: ''
+    }
+  },
   googleId: { type: String, select: false },
   loginOtp:{ otp: { type: String, select: false }, expiresAt: { type: Date, select: false } },
   verificationOtp:{ otp: { type: String, select: false }, expiresAt: { type: Date, select: false } },
