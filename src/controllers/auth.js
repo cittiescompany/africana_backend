@@ -434,16 +434,16 @@ async function getMerchants(merchantsArray) {
 }
 // getMerchants();
 
-// async function deleteMerchants(merchantsArray) {
-//   try {
-//     for (const merchant of merchantsArray) {
-//      const result = await users.deleteOne({ email: merchant.email });
-//      console.log(`${result.deletedCount} merchant(s) deleted successfully for email: ${merchant.email}`);
-//     }
-//   } catch (error) {
-//     console.error('Error saving merchants:', error);
-//   }
-// }
+async function deleteMerchants(merchantsArray) {
+  try {
+    for (const merchant of merchantsArray) {
+     const result = await users.deleteOne({ email: merchant.email });
+     console.log(`${result.deletedCount} merchant(s) deleted successfully for email: ${merchant.email}`);
+    }
+  } catch (error) {
+    console.error('Error saving merchants:', error);
+  }
+}
 
 const merchants = [
   {
@@ -456,7 +456,7 @@ const merchants = [
     isMerchant: true,
     merchantInfo: {
       merchantName: "Savannah Grill",
-      category: "Restaurants",
+      category: "Restaurant",
       country: "Nigeria",
       state: "Lagos",
       address: "123 Victoria Island",
@@ -546,7 +546,7 @@ const merchants = [
     isMerchant: true,
     merchantInfo: {
       merchantName: "Taste of Kenya",
-      category: "Restaurants",
+      category: "Restaurant",
       country: "Kenya",
       state: "Nairobi",
       address: "34 Kilimani Road",
@@ -600,7 +600,7 @@ const merchants = [
     isMerchant: true,
     merchantInfo: {
       merchantName: "Savannah Grill",
-      category: "Restaurants",
+      category: "Restaurant",
       country: "Nigeria",
       state: "Lagos",
       address: "123 Victoria Island",
@@ -654,7 +654,7 @@ const merchants = [
     isMerchant: true,
     merchantInfo: {
       merchantName: "Taste of Kenya",
-      category: "Restaurants",
+      category: "Restaurant",
       country: "Kenya",
       state: "Nairobi",
       address: "34 Kilimani Road",
