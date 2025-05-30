@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
   },
   referralCode: {
     type: Number,
-    required: true,
+    required: false,
   },
   referredBy: {
     type: Number,
@@ -49,32 +49,9 @@ const userSchema = new mongoose.Schema({
     default: false
   },
   merchantInfo: {
-    category: {
-      type: String,
-      enum: ['', 'Restaurant', 'Food Items', 'African Attire', 'Herb', 'Hair Saloon'],
-      default: ''
-    },
-    merchantName: {
-      type: String,
-      trim: true,
-      default: ''
-    },
-    address: {
-      type: String,
-      default: ''
-    },
-    country: {
-      type: String,
-      default: ''
-    },
-    state: {
-      type: String,
-      default: ''
-    },
-    businessImageUrl: {
-      type: String,
-      default: ''
-    }
+   type: mongoose.Schema.Types.Mixed,
+   required: false,
+   default: null,
   },
   googleId: { type: String, select: false },
   loginOtp:{ otp: { type: String, select: false }, expiresAt: { type: Date, select: false } },

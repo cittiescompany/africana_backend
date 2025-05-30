@@ -14,7 +14,6 @@ router.get('', (req, res, next) => {
 
 router.use('/auth', auth);
 router.use('/user', user);
-router.use('/merchants', merch);
 router.use('/investments', investmentRoutes);
 router.use('/properties', propertyRoutes);
 router.use('/transactions', transactionsRoutes);

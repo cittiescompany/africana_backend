@@ -44,5 +44,6 @@ router.post(
   authController.login,
 );
 router.get('/profile', authenticate, authController.getProfile);
+router.get('/merchants', authController.getMerchants);
 
 module.exports=router;

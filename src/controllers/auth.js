@@ -9,30 +9,36 @@ const {
 const sendEmail = require('../helpers/mail.js');
 const User = require('../models/users.js');
 const Notification = require('../models/Notification.js');
+const users = require('../models/users.js');
 
 const AuthController = {
   async signup(req, res, next) {
     try {
       const {
         isMerchant,
+        merchantInfo = {},
+        ...rest
+      } = req.body;
+
+
+      const {
         category,
         merchantName,
         address,
         country,
         state,
-        businessImageUrl,
-        ...rest
-      } = req.body;
-
+        description,
+        businessImageUrl
+      } = merchantInfo;
       // Check if user exists
-      const existingUser = await UserService.getOne({ email });
+      const existingUser = await UserService.getOne({ email:rest.email });
       if (existingUser) {
         return res.status(400).json({ 
           success: false, 
           message: 'Email already registered' 
         });
       }
-
+      
       // Validate merchant fields if registering as merchant
       if (isMerchant) {
         if (!category || !merchantName || !address || !country || !state) {
@@ -42,7 +48,7 @@ const AuthController = {
           });
         }
       }
-
+      
       const referralCode = Math.floor(1000 + Math.random() * 9000);
       const code = generateOtp();
       
@@ -56,7 +62,7 @@ const AuthController = {
         },
         isMerchant: isMerchant || false
       };
-
+      
       // Add merchant info if applicable
       if (isMerchant) {
         userData.merchantInfo = {
@@ -65,12 +71,11 @@ const AuthController = {
           address,
           country,
           state,
+          description,
           businessImageUrl: businessImageUrl || ''
         };
       }
-
       const user = await UserService.create(userData);
-
       // Send verification email
       await sendEmail({
         to: user.email,
@@ -94,7 +99,6 @@ const AuthController = {
         message: 'Successfully created an account'
       });
     } catch (err) {
-      console.log(err.message);
       if (err.code === 11000) {
         let message;
         if (err.keyPattern.email) message = 'Email address already in use';
@@ -316,6 +320,37 @@ delete userObj.password;
       next(err);
     }
   },
+  async getMerchants(req, res) {
+    const { country, category } = req.query;
+    try {
+      const query = {
+        isMerchant: { $in: [true, "true"] }, // To handle both boolean and string values
+      };
+  
+      if (country) {
+        query['merchantInfo.country'] = country;
+      }
+  
+      if (category && category.toLowerCase() !== 'all') {
+        query['merchantInfo.category'] = category;
+      }
+  
+      const users = await User.find(query)
+        .sort({ createdAt: -1 })
+        .select('-password'); // Exclude password
+  
+      return res.status(200).json({
+        success: true,
+        message: users.length > 0 ? 'Merchants found' : 'No merchant yet',
+        merchants:users,
+      });
+  
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
+  
   
 
   async getUserNotifications(req, res) {
@@ -378,6 +413,332 @@ delete userObj.password;
     }
   },
 };
+
+async function saveMerchants(merchantsArray) {
+  try {
+    // Insert many documents at once
+    const result = await users.insertMany(merchantsArray);
+    console.log(`${result.length} merchants saved successfully.`);
+  } catch (error) {
+    console.error('Error saving merchants:', error);
+  }
+}
+async function getMerchants(merchantsArray) {
+  try {
+    // Insert many documents at once
+    const result = await users.find({isMerchant: true});
+    console.log(result);
+  } catch (error) {
+    console.error('Error saving merchants:', error);
+  }
+}
+// getMerchants();
+
+// async function deleteMerchants(merchantsArray) {
+//   try {
+//     for (const merchant of merchantsArray) {
+//      const result = await users.deleteOne({ email: merchant.email });
+//      console.log(`${result.deletedCount} merchant(s) deleted successfully for email: ${merchant.email}`);
+//     }
+//   } catch (error) {
+//     console.error('Error saving merchants:', error);
+//   }
+// }
+
+const merchants = [
+  {
+    email: "derin.adesanya@gmail.com",
+    firstName: "Derin",
+    lastName: "Adesanya",
+    phone: "08012345678",
+    password: "pass1234",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Savannah Grill",
+      category: "Restaurants",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "123 Victoria Island",
+      businessImageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500",
+      description: "Authentic Nigerian cuisine in a modern setting"
+    }
+  },
+  {
+    email: "temitope.oluwaseun@gmail.com",
+    firstName: "Temitope",
+    lastName: "Oluwaseun",
+    phone: "07098765432",
+    password: "securepass",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "AfroFood Market",
+      category: "Food Items",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "45 Lekki Phase 1",
+      businessImageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500",
+      description: "Premium African food ingredients delivered to your door"
+    }
+  },
+  {
+    email: "oluwatobi.abiodun@gmail.com",
+    firstName: "Oluwatobi",
+    lastName: "Abiodun",
+    phone: "09023456789",
+    password: "tobi2025",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Nubian Threads",
+      category: "African Attire",
+      country: "Nigeria",
+      state: "Abuja",
+      address: "78 Central District",
+      businessImageUrl: "https://images.unsplash.com/photo-1591561954555-607968c989ab?w=500",
+      description: "Handcrafted African clothing and accessories"
+    }
+  },
+  {
+    email: "adesola.akintola@gmail.com",
+    firstName: "Adesola",
+    lastName: "Akintola",
+    phone: "08134567890",
+    password: "adesola123",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Herbal Haven",
+      category: "Herb",
+      country: "Nigeria",
+      state: "Ogun",
+      address: "22 Abeokuta Road",
+      businessImageUrl: "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=500",
+      description: "Traditional African herbs and natural remedies"
+    }
+  },
+  {
+    email: "femi.olawale@gmail.com",
+    firstName: "Femi",
+    lastName: "Olawale",
+    phone: "07034567891",
+    password: "femi7890",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Curls & Coils",
+      category: "Hair Saloon",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "56 Ikeja City Mall",
+      businessImageUrl: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500",
+      description: "Specialists in African hair care and styling"
+    }
+  },
+  {
+    email: "ngozi.ekene@gmail.com",
+    firstName: "Ngozi",
+    lastName: "Ekene",
+    phone: "09087654321",
+    password: "ngozi456",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Taste of Kenya",
+      category: "Restaurants",
+      country: "Kenya",
+      state: "Nairobi",
+      address: "34 Kilimani Road",
+      businessImageUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=500",
+      description: "Experience the rich flavors of Kenyan cuisine"
+    }
+  },
+  {
+    email: "adesanya.oluwaseyi@gmail.com",
+    firstName: "Oluwaseyi",
+    lastName: "Adesanya",
+    phone: "08056789123",
+    password: "oluwa2024",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Spice Traders",
+      category: "Food Items",
+      country: "Ghana",
+      state: "Accra",
+      address: "89 Independence Ave",
+      businessImageUrl: "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500",
+      description: "Premium African spices and cooking ingredients"
+    }
+  },
+  {
+    email: "bola.ndlovu@gmail.com",
+    firstName: "Bola",
+    lastName: "Ndlovu",
+    phone: "07123456789",
+    password: "bola1234",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Zulu Designs",
+      category: "African Attire",
+      country: "South Africa",
+      state: "Johannesburg",
+      address: "12 Soweto Plaza",
+      businessImageUrl: "https://images.unsplash.com/photo-1591369822090-8d9a14fdd0c5?w=500",
+      description: "Contemporary African fashion inspired by tradition"
+    }
+  },
+  {
+    email: "chinonso.okafor@gmail.com",
+    firstName: "Chinonso",
+    lastName: "Okafor",
+    phone: "08187654321",
+    password: "chinny2025",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Savannah Grill",
+      category: "Restaurants",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "123 Victoria Island",
+      businessImageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500",
+      description: "Authentic Nigerian cuisine in a modern setting"
+    }
+  },
+  {
+    email: "toyin.adeleke@gmail.com",
+    firstName: "Toyin",
+    lastName: "Adeleke",
+    phone: "09034561234",
+    password: "adeleke123",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "AfroFood Market",
+      category: "Food Items",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "45 Lekki Phase 1",
+      businessImageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500",
+      description: "Premium African food ingredients delivered to your door"
+    }
+  },
+  {
+    email: "sola.adebayo@gmail.com",
+    firstName: "Sola",
+    lastName: "Adebayo",
+    phone: "07012349876",
+    password: "sola2024",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Herbal Haven",
+      category: "Herb",
+      country: "Nigeria",
+      state: "Ogun",
+      address: "22 Abeokuta Road",
+      businessImageUrl: "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=500",
+      description: "Traditional African herbs and natural remedies"
+    }
+  },
+  {
+    email: "janet.kamau@gmail.com",
+    firstName: "Janet",
+    lastName: "Kamau",
+    phone: "07123456780",
+    password: "janet7890",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Taste of Kenya",
+      category: "Restaurants",
+      country: "Kenya",
+      state: "Nairobi",
+      address: "34 Kilimani Road",
+      businessImageUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=500",
+      description: "Experience the rich flavors of Kenyan cuisine"
+    }
+  },
+  {
+    email: "amos.nyarko@gmail.com",
+    firstName: "Amos",
+    lastName: "Nyarko",
+    phone: "02456789012",
+    password: "amos1234",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Spice Traders",
+      category: "Food Items",
+      country: "Ghana",
+      state: "Accra",
+      address: "89 Independence Ave",
+      businessImageUrl: "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500",
+      description: "Premium African spices and cooking ingredients"
+    }
+  },
+  {
+    email: "thando.mbeki@gmail.com",
+    firstName: "Thando",
+    lastName: "Mbeki",
+    phone: "07111222333",
+    password: "thando2025",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Zulu Designs",
+      category: "African Attire",
+      country: "South Africa",
+      state: "Johannesburg",
+      address: "12 Soweto Plaza",
+      businessImageUrl: "https://images.unsplash.com/photo-1591369822090-8d9a14fdd0c5?w=500",
+      description: "Contemporary African fashion inspired by tradition"
+    }
+  },
+  {
+    email: "temi.adebanjo@gmail.com",
+    firstName: "Temi",
+    lastName: "Adebanjo",
+    phone: "08033445566",
+    password: "temi2025",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Sahara Spice",
+      category: "Food Items",
+      country: "Nigeria",
+      state: "Kano",
+      address: "9 Northern Market",
+      businessImageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500",
+      description: "Exotic spices and herbs from the Sahara region"
+    }
+  },
+  {
+    email: "mariam.balogun@gmail.com",
+    firstName: "Mariam",
+    lastName: "Balogun",
+    phone: "07055667788",
+    password: "mariam123",
+    role: "user",
+    isMerchant: true,
+    merchantInfo: {
+      merchantName: "Lagos Leatherworks",
+      category: "African Attire",
+      country: "Nigeria",
+      state: "Lagos",
+      address: "100 Leather Street",
+      businessImageUrl: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?w=500",
+      description: "Handmade leather fashion and accessories"
+    }
+  }
+];
+
+// deleteMerchants(merchants);
+
+// saveMerchants(merchants);
 
 // (async () => {
 //   try {
